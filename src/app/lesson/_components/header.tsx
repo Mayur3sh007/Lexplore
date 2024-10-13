@@ -1,6 +1,5 @@
 "use client";
-
-
+import { useRouter } from "next/navigation";
 import { Progress } from "@/components/ui/progress"; // Assuming this is a UI component for showing progress
 import { InfinityIcon, X } from "lucide-react"; // Icons from lucide-react
 import Image from "next/image"; // Next.js Image component
@@ -16,9 +15,10 @@ export const Header = ({
   percentage,
   hasActiveSubscription,
 }: Props) => {
+  const router = useRouter();
   const handleExitClick = () => {
     // Logic to open exit modal can be handled here, if necessary
-    console.log("Exit button clicked"); // Placeholder for actual exit functionality
+    router.push("/learn"); // Placeholder for actual exit functionality
   };
 
   return (

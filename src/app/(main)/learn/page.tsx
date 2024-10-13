@@ -20,7 +20,7 @@ const userProgress = {
 };
 
 const courseProgress = {
-  activeLesson: 1,
+  activeLesson: 2,
 };
 
 // Adjust lessonPercentage to match the expected structure
