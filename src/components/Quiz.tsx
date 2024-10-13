@@ -39,18 +39,19 @@ export default function Quizs() {
   const [difficulty, setDifficulty] = useState<string | null>(null);
   const [timeLimit, setTimeLimit] = useState<number>(0);
   const [useCases, setUseCases] = useState<UseCasesData | null>(null);
-  const [quizState, setQuizState] = useState('start')
-  const [category, setCategory] = useState('Greetings')
+  const [quizAction, setQuizAction] = useState('start')
+  const [category, setCategory] = useState('Grammar')
   const [selectedAnswer, setSelectedAnswer] = useState('')
   const [result, setResult] = useState<ResultType | null>(null);
   const [performanceSummary, setPerformanceSummary] = useState<PerformanceType | null>(null);
   const [loading, setLoading] = useState(false)
   const [questionCount, setQuestionCount] = useState(0);  // Question counter
-
+  const [currTime, setCurrTime] = useState<any>(0);
+  const [quizState, setQuizState] = useState<any>([])
   useEffect(() => {
     // Remove the automatic call to startQuiz here
   }, [category])
-  
+
   const startQuiz = async (Category: string) => {
     setLoading(true)
     setQuestionCount(0)  // Reset question count at the start
@@ -61,22 +62,22 @@ export default function Quizs() {
         body: JSON.stringify({ action: 'start', category: Category }),
       })
       const data = await response.json()
-  
-      setQuizState("answering") // Save the initial quiz state from server
+
+      setQuizAction("answering") // Save the initial quiz state from server
       console.log("Started Quiz")
       console.log("Quiz State: ", data.quiz_state)
       if (data.next_action === 'get_question') {
         getQuestion(data.quiz_state)
       }
-  
+
     } catch (error) {
       console.error('Error starting quiz:', error)
     }
     setLoading(false)
   }
-  
+
   const getQuestion = async (currentState: any) => {
-    if (questionCount >= 10) {
+    if (questionCount >= 5) {
       endQuiz(currentState);  // End quiz after 10 questions
       return;
     }
@@ -90,24 +91,75 @@ export default function Quizs() {
       })
 
       const data = await response.json()
-  
+
       setQuestion(data.question)
       setOptions(data.options)
       setDifficulty(data.difficulty)
       setTimeLimit(data.time_limit)
       setUseCases(data.use_cases)
-      setQuizState("answering")  // Update state with new data
+      setQuizAction("answering")  // Update state with new data
       setQuestionCount(prevCount => prevCount + 1);  // Increment the question count
-      
+      const now = new Date();
+      const formattedTime = now.toISOString();
+      setCurrTime(formattedTime)
+      setQuizState(data.quiz_state)
+
       console.log("GOT NEW DATA")
       console.log("DATA: ", data)
-  
+
     } catch (error) {
       console.error('Error getting question:', error)
     }
     setLoading(false)
   }
-  
+
+
+  const submitAnswer = async () => {
+    setLoading(true);
+    try {
+      console.log(selectedAnswer)
+      const response = await fetch('http://127.0.0.1:5000/quiz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'submit_answer',start_time: currTime, question: question, options: options ,timelimit : timeLimit ,answer: selectedAnswer, quiz_state: quizState, difficulty: difficulty }),
+      });
+
+      const data = await response.json();
+      setResult({ result: data.result, message: data.message, timeTaken: data.time_taken });
+      setQuizAction(data.quiz_state);  // Update state with new data
+
+      if (data.next_action === 'get_question' && questionCount < 10) {
+        getQuestion(data.quiz_state);
+      } else if (data.next_action === 'end_quiz' || questionCount >= 10) {
+        endQuiz(data.quiz_state);
+      }
+
+    } catch (error) {
+      console.error('Error submitting answer:', error);
+    }
+    setLoading(false);
+  };
+
+  const endQuiz = async (currentState: any) => {
+    setLoading(true);
+    try {
+      const response = await fetch('http://127.0.0.1:5000/quiz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'end_quiz', quiz_state: currentState }),
+      });
+      const data = await response.json();
+      setPerformanceSummary(data.performance_summary);
+      setQuizAction(data.quiz_state);  // Update state with end data
+
+    } catch (error) {
+      console.error('Error ending quiz:', error);
+    }
+    setLoading(false);
+  };
+
+
+
   const renderUseCases = () => (
     <Card className="mb-6">
       <CardHeader>
@@ -175,49 +227,6 @@ export default function Quizs() {
     </Card>
   );
 
-  const submitAnswer = async () => {
-    setLoading(true);
-    try {
-      console.log(selectedAnswer)
-      const response = await fetch('http://127.0.0.1:5000/quiz', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'submit_answer', answer: selectedAnswer, quiz_state: quizState }),
-      });
-  
-      const data = await response.json();
-      setResult({ result: data.result, message: data.message, timeTaken: data.time_taken });
-      setQuizState(data.quiz_state);  // Update state with new data
-  
-      if (data.next_action === 'get_question' && questionCount < 10) {
-        getQuestion(data.quiz_state);
-      } else if (data.next_action === 'end_quiz' || questionCount >= 10) {
-        endQuiz(data.quiz_state);
-      }
-  
-    } catch (error) {
-      console.error('Error submitting answer:', error);
-    }
-    setLoading(false);
-  };
-  
-  const endQuiz = async (currentState: any) => {
-    setLoading(true);
-    try {
-      const response = await fetch('http://127.0.0.1:5000/quiz', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'end_quiz', quiz_state: currentState }),
-      });
-      const data = await response.json();
-      setPerformanceSummary(data.performance_summary);
-      setQuizState(data.quiz_state);  // Update state with end data
-  
-    } catch (error) {
-      console.error('Error ending quiz:', error);
-    }
-    setLoading(false);
-  };
 
   const renderPerformanceSummary = () => (
     <Card className="mb-6">
@@ -240,7 +249,7 @@ export default function Quizs() {
                   <Progress value={(stats.correct / stats.total) * 100} className="mt-2" />
                 </div>
               ))}
-              <Button className="mt-6" onClick={() => setQuizState('start')}>
+              <Button className="mt-6" onClick={() => setQuizAction('start')}>
                 Start New Quiz
               </Button>
             </>
@@ -256,15 +265,15 @@ export default function Quizs() {
     <div className="max-w-2xl mx-auto p-6">
       <h1 className="text-3xl font-bold mb-6">French Learning Quiz</h1>
       {loading && <Progress className="mb-4" />}
-      {quizState === 'start' && (
-        <Button onClick={() => startQuiz('Greetings')}>
+      {quizAction === 'start' && (
+        <Button onClick={() => startQuiz('Grammar')}>
           Start Quiz
         </Button>
       )}
-      {quizState === 'answering' && renderQuestion()}
-      {quizState === 'result' && renderResult()}
-      {quizState === 'end' && renderPerformanceSummary()}
+      {quizAction === 'answering' && renderUseCases() &&  renderQuestion()}
+      {quizAction === 'result' && renderResult()}
+      {quizAction === 'end' && renderPerformanceSummary()}
     </div>
   );
-  
+
 }

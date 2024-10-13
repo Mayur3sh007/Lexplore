@@ -12,6 +12,8 @@ from flask import Flask, request, jsonify,session,g
 from flask_cors import CORS
 from flask_session import Session
 
+from datetime import datetime,timezone
+from dateutil import parser
 
 #Setup Flask app
 app = Flask(__name__)
@@ -35,7 +37,7 @@ df = pd.read_csv('Questions.csv')
 # print(df['Category'].value_counts())
 
 # Generator Functions for Questions
-def get_unique_question(category, difficulty, question_history, last_question=None, max_retries=10):
+def get_unique_question(category, difficulty, question_history, last_question=None, max_retries=50):
     # print("Getting unique question")
     # print("Category", category)
     # print("Difficulty", difficulty)
@@ -62,16 +64,17 @@ def get_unique_question(category, difficulty, question_history, last_question=No
             attempt += 1
             # Use LLaMA model to select the next best question
             prompt = f"""
-            Given the following context and available questions, select the most appropriate next question for a learning flow:
+                Given the following context and available questions, select the most appropriate next question for a learning flow:
 
-            Last question asked: "{last_question}"
-            Category: {category}
-            Difficulty: {difficulty}
+                Last question asked: "{last_question}"
+                Category: {category}
+                Difficulty: {difficulty}
 
-            Available questions:
-            {available_questions['QuestionEn'].to_list()}
+                Available questions:
+                {available_questions['QuestionEn'].to_list()}
 
-            Please respond with only the number of the best next question (1 for the first question, 2 for the second, etc.).
+                Please respond with only the number of the best next question (1 for the first question, 2 for the second, etc
+                If there are no more questions available, please respond with any question number available.
             """
 
             try:
@@ -348,18 +351,30 @@ def quiz():
 
     elif action == 'submit_answer':
         user_answer = data.get('answer')
-        current_q = state['current_question']
-        end_time = datetime.now()
-        time_taken = (end_time - datetime.fromisoformat(current_q['start_time'])).total_seconds()
-        difficulty = ['Easy', 'Medium', 'Hard'][state['current_difficulty_index']]
+        quiz_state = data.get('quiz_state')
+        print("Quiz State: ", quiz_state)
+        current_q = quiz_state['current_question']
+        start_time_str = data.get('start_time')
+        start_time = parser.isoparse(start_time_str)  # Handles the 'Z' (UTC) properly
+        end_time = datetime.now(timezone.utc)
+        time_taken = (end_time - start_time).total_seconds()
+
+        difficulty = data.get('difficulty')
 
         if time_taken > state['adaptive_time_limits'][difficulty]:
             result = False
             message = "Time's up! You took too long to answer."
         else:
-            correct_option = current_q['french_options'][ord(current_q['correct_answer']) - ord('A')]
-            result = check_answer(user_answer, correct_option)
-            message = "Correct!" if result else f"Incorrect. The correct answer was: {correct_option}"
+            # correct_answer = current_q['correct_answer']  # e.g., "A"
+            # french_options = current_q['french_options']  # e.g., ['Un', 'Une', 'Les', 'Des']
+
+            # # Check if the correct_answer is valid
+            # correct_option = 0
+            # if correct_answer in french_options:
+            #     correct_option = french_options[french_options.index(correct_answer)]
+            # result = check_answer(user_answer, correct_option)
+            result = check_answer(user_answer, current_q['correct_answer'])
+            message = "Correct!" if result else f"Incorrect. The correct answer was: {current_q['correct_answer']}"
 
         # Update quiz state based on result
         if result:
