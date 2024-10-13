@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react'
@@ -47,11 +48,9 @@ export default function Quizs() {
   const [questionCount, setQuestionCount] = useState(0);  // Question counter
 
   useEffect(() => {
-    if (quizState === 'start') {
-      startQuiz('Greetings')
-    }
-  }, [quizState, category])
-
+    // Remove the automatic call to startQuiz here
+  }, [category])
+  
   const startQuiz = async (Category: string) => {
     setLoading(true)
     setQuestionCount(0)  // Reset question count at the start
@@ -105,49 +104,6 @@ export default function Quizs() {
   
     } catch (error) {
       console.error('Error getting question:', error)
-    }
-    setLoading(false)
-  }
-  
-  const submitAnswer = async () => {
-    setLoading(true)
-    try {
-      const response = await fetch('http://127.0.0.1:5000/quiz', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'submit_answer', answer: selectedAnswer, quiz_state: quizState }),
-      })
-  
-      const data = await response.json()
-      setResult({ result: data.result, message: data.message, timeTaken: data.time_taken })
-      setQuizState(data.quiz_state)  // Update state with new data
-  
-      if (data.next_action === 'get_question' && questionCount < 10) {
-        getQuestion(data.quiz_state)
-      } else if (data.next_action === 'end_quiz' || questionCount >= 10) {
-        endQuiz(data.quiz_state)
-      }
-  
-    } catch (error) {
-      console.error('Error submitting answer:', error)
-    }
-    setLoading(false)
-  }
-  
-  const endQuiz = async (currentState: any) => {
-    setLoading(true)
-    try {
-      const response = await fetch('http://127.0.0.1:5000/quiz', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'end_quiz', quiz_state: currentState }),
-      })
-      const data = await response.json()
-      setPerformanceSummary(data.performance_summary)
-      setQuizState(data.quiz_state)  // Update state with end data
-  
-    } catch (error) {
-      console.error('Error ending quiz:', error)
     }
     setLoading(false)
   }
@@ -219,6 +175,49 @@ export default function Quizs() {
     </Card>
   );
 
+  const submitAnswer = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('http://127.0.0.1:5000/quiz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'submit_answer', answer: selectedAnswer, quiz_state: quizState }),
+      });
+  
+      const data = await response.json();
+      setResult({ result: data.result, message: data.message, timeTaken: data.time_taken });
+      setQuizState(data.quiz_state);  // Update state with new data
+  
+      if (data.next_action === 'get_question' && questionCount < 10) {
+        getQuestion(data.quiz_state);
+      } else if (data.next_action === 'end_quiz' || questionCount >= 10) {
+        endQuiz(data.quiz_state);
+      }
+  
+    } catch (error) {
+      console.error('Error submitting answer:', error);
+    }
+    setLoading(false);
+  };
+  
+  const endQuiz = async (currentState: any) => {
+    setLoading(true);
+    try {
+      const response = await fetch('http://127.0.0.1:5000/quiz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'end_quiz', quiz_state: currentState }),
+      });
+      const data = await response.json();
+      setPerformanceSummary(data.performance_summary);
+      setQuizState(data.quiz_state);  // Update state with end data
+  
+    } catch (error) {
+      console.error('Error ending quiz:', error);
+    }
+    setLoading(false);
+  };
+
   const renderPerformanceSummary = () => (
     <Card className="mb-6">
       <CardHeader>
@@ -244,7 +243,6 @@ export default function Quizs() {
                 Start New Quiz
               </Button>
             </>
-
           ) : (
             <p>No performance summary available</p>
           )
@@ -263,13 +261,11 @@ export default function Quizs() {
         </Button>
       )}
       {quizState === 'answering' && (
-        <>
-          {useCases && renderUseCases()}
-          {renderQuestion()}
-        </>
+        <div dangerouslySetInnerHTML={{ __html: renderQuestion() }} />
       )}
       {quizState === 'result' && renderResult()}
       {quizState === 'end' && renderPerformanceSummary()}
     </div>
-  )
+  );
+  
 }
