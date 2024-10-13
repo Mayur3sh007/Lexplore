@@ -15,25 +15,25 @@ type ChallengeProps = {
 export const Challenge = ({
   options,
   onSelect,
-  status = "none",
+  status,
   selectedOption,
-  disabled = false,
+  disabled,
   type,
 }: ChallengeProps) => {
   return (
     <div className="flex flex-col gap-y-2">
-      {options.map((option) => (
+      {options.map((option, i) => (
         <Card
           key={option.id}
           id={option.id}
           imageSrc={null} // Example, replace with actual image source if needed
           audioSrc={null} // Example, replace with actual audio source if needed
           text={option.text}
-          shortcut={`Ctrl + ${option.id}`} // Example shortcut
+          shortcut={`${i+1}`} // Example shortcut
           onClick={() => onSelect(option.id)}
           selected={selectedOption === option.id}
           disabled={disabled}
-          status={selectedOption === option.id ? status : "none"} // Set status based on selection
+          status={status} // Set status based on selection
           type={type}
         />
       ))}

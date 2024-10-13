@@ -1,6 +1,6 @@
 // In Quiz.tsx
 "use client"; // Indicate that this is a client-side component
-
+import { useRouter } from "next/navigation";
 import { useState } from "react"; // Import useState for managing local state
 import { Header } from "./header"; // Import Header component
 import { QuestionBubble } from "./question-bubble"; // Import QuestionBubble component
@@ -36,6 +36,8 @@ export const Quiz = ({
   initialLessonChallenges,
   
 }: Props) => {
+  const router = useRouter();
+  const [status, setStatus] = useState<"none" | "wrong" | "correct">("none");
   const [hearts, setHearts] = useState(initialHearts); // Manage hearts count
   const [percentage, setPercentage] = useState(initialPercentage); // Manage progress percentage
   const [activeIndex, setActiveIndex] = useState(0); // Manage the active challenge index
@@ -47,21 +49,40 @@ export const Quiz = ({
 
   // Handle option selection
   const onSelect = (id: number) => {
+    if (status !== "none") return;
     setSelectedOption(id); // Set selected option
+  };
+
+  const onNext = () => {
+    setActiveIndex((current) => current + 1);
   };
 
   // Handle continuing to the next challenge
   const onContinue = () => {
     if (!selectedOption) return; // If no option is selected, exit
 
+    if (status === "wrong") {
+      setStatus("none");
+      setSelectedOption(undefined);
+      return;
+    }
+
+    if (status === "correct") {
+      onNext();
+      setStatus("none");
+      setSelectedOption(undefined);
+      return;
+    }
+
     const correctOption = options.find((option) => option.correct); // Find the correct option
+    
+    if (!correctOption) return;
+    
     if (correctOption?.id === selectedOption) {
-      // If the selected option is correct
-      setPercentage((prev) => Math.min(prev + 100 / challenges.length, 100)); // Increase percentage
-      setActiveIndex((prev) => prev + 1); // Move to next challenge
-      setSelectedOption(undefined); // Reset selected option
+      setStatus("correct");
     } else {
-      setHearts((prev) => Math.max(prev - 1, 0)); // Decrease hearts for incorrect answer
+        setHearts((prev) => prev - 1);
+        setStatus("wrong");
     }
   };
 
@@ -77,8 +98,21 @@ export const Quiz = ({
           <ResultCard variant="points" value={challenges.length * 10} />
           <ResultCard variant="hearts" value={hearts} />
         </div>
-        <Footer status="completed" onCheck={() => console.log("Check")} />
+        <Footer status="completed" onCheck={() => router.push("/learn")} />
         <Confetti width={window.innerWidth} height={window.innerHeight} />
+      </div>
+    );
+  }
+
+  if (hearts == 0) {
+    // If there are no more challenges left
+    return (
+      <div className="mx-auto flex h-full max-w-lg flex-col items-center justify-center gap-y-4 text-center lg:gap-y-8">
+        <Image src="/finish.svg" alt="finish" height={100} width={100} />
+        <h1 className="text-xl font-bold text-neutral-700 lg:text-3xl">
+          Hearts Over 💔
+        </h1>
+        <Footer status="completed" onCheck={() => console.log("Check")} />
       </div>
     );
   }
@@ -99,7 +133,7 @@ export const Quiz = ({
               <Challenge
                 options={options}
                 onSelect={onSelect}
-                status="none" // Set status to "none" as placeholder
+                status={status} // Set status to "none" as placeholder
                 selectedOption={selectedOption}
                 disabled={false} // No loading state here
                 type={challenge.type} // Use the challenge type
@@ -108,7 +142,7 @@ export const Quiz = ({
           </div>
         </div>
       </div>
-      <Footer disabled={!selectedOption} status="none" onCheck={onContinue} />
+      <Footer disabled={!selectedOption} status={status} onCheck={onContinue} />
     </>
   );
 };
