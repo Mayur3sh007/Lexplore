@@ -38,7 +38,7 @@ const units = [
     description: "Introduction to Spanish",
     title: "Unit 1",
     lessons: [
-      { id: 1, title: "Lesson 1", description: "Basics", completed: true, percentage: 75 },
+      { id: 1, title: "Lesson 1", description: "Basics", completed: true, percentage: 100 },
       { id: 2, title: "Lesson 2", description: "Greetings", completed: false, percentage: 50 },
     ],
   },
@@ -48,7 +48,7 @@ const units = [
     description: "Advanced Topics in Spanish",
     title: "Unit 2",
     lessons: [
-      { id: 3, title: "Lesson 1", description: "Verbs", completed: false, percentage: 30 },
+      { id: 3, title: "Lesson 1", description: "Verbs", completed: false, percentage: 0 },
       { id: 4, title: "Lesson 2", description: "Vocabulary", completed: false, percentage: 0 },
     ],
   },
