@@ -62,7 +62,7 @@ export default function Quizs() {
       })
       const data = await response.json()
   
-      setQuizState(data.quiz_state) // Save the initial quiz state from server
+      setQuizState("answering") // Save the initial quiz state from server
       console.log("Started Quiz")
       console.log("Quiz State: ", data.quiz_state)
       if (data.next_action === 'get_question') {
@@ -96,7 +96,7 @@ export default function Quizs() {
       setDifficulty(data.difficulty)
       setTimeLimit(data.time_limit)
       setUseCases(data.use_cases)
-      setQuizState(data.quiz_state)  // Update state with new data
+      setQuizState("answering")  // Update state with new data
       setQuestionCount(prevCount => prevCount + 1);  // Increment the question count
       
       console.log("GOT NEW DATA")
@@ -260,9 +260,7 @@ export default function Quizs() {
           Start Quiz
         </Button>
       )}
-      {quizState === 'answering' && (
-        <div dangerouslySetInnerHTML={{ __html: renderQuestion() }} />
-      )}
+      {quizState === 'answering' && renderQuestion()}
       {quizState === 'result' && renderResult()}
       {quizState === 'end' && renderPerformanceSummary()}
     </div>

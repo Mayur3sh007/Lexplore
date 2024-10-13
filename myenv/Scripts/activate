@@ -38,7 +38,7 @@ deactivate () {
 # unset irrelevant variables
 deactivate nondestructive
 
-VIRTUAL_ENV="D:\MPR Sem 5\Lang\myenv"
+VIRTUAL_ENV="C:\Users\Bhatia\React_Apps\Lang\myenv"
 export VIRTUAL_ENV
 
 _OLD_VIRTUAL_PATH="$PATH"
