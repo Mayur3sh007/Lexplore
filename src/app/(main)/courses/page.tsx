@@ -10,7 +10,7 @@ const courses = [
 ];
 
 const userProgress = {
-  activeCourseId: 1, // Simulate an active course ID
+  activeCourseId: 2, // Simulate an active course ID
 };
 
 export const metadata: Metadata = {
