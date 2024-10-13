@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   description:
     "Learning a language on Duolingo is completely free, but you can remove ads and support free education with Super. First 2 weeks on us! Learn more ...",
   icons: {
-    icon: "/favicon.ico",
+    icon: "/lex_logo.png",
   },
 };
 
