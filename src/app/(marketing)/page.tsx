@@ -29,7 +29,7 @@ export default function Home() {
           ) : (
             <>
               <Button size="lg" variant="secondary" className="w-full">
-                <Link href="/signup">Get Started</Link>
+                <Link href="/learn">Get Started</Link>
               </Button>
               <Button size="lg" variant="primaryOutline" className="w-full">
                 <Link href="/signin">I already have an account</Link>
