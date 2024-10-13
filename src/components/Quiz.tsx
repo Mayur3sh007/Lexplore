@@ -178,6 +178,7 @@ export default function Quizs() {
   const submitAnswer = async () => {
     setLoading(true);
     try {
+      console.log(selectedAnswer)
       const response = await fetch('http://127.0.0.1:5000/quiz', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
