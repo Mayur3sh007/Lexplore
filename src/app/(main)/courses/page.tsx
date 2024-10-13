@@ -3,9 +3,9 @@ import { Metadata } from "next";
 
 // Simulated data
 const courses = [
-  { id: 1, title: "Spanish", imageSrc: "/images/spanish.jpg" },
-  { id: 2, title: "French", imageSrc: "/images/french.jpg" },
-  { id: 3, title: "German", imageSrc: "/images/german.jpg" },
+  { id: 1, title: "Spanish", imageSrc: "/spain.png" },
+  { id: 2, title: "French", imageSrc: "/france.png" },
+  { id: 3, title: "Japanese", imageSrc: "/japan.png" },
   // Add more course objects as needed
 ];
 

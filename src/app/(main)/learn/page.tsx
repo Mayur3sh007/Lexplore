@@ -13,7 +13,7 @@ import { Metadata } from "next";
 const userProgress = {
   activeCourse: { 
     title: "French",  // Course title
-    imageSrc: "/path/to/spanish-image.svg" // Replace with the actual image path
+    imageSrc: "/france.png" // Replace with the actual image path
   },
   hearts: 3,
   points: 150,
