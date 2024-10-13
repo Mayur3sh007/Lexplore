@@ -20,8 +20,8 @@ export const metadata: Metadata = {
 // Simulated user progress data for demo purposes
 const userProgress = {
   activeCourse: { 
-    title: "Spanish",  // Change activeCourse to be an object
-    imageSrc: "/path/to/spanish-image.svg" // Add the appropriate image source
+    title: "French",  // Change activeCourse to be an object
+    imageSrc: "france.png" // Add the appropriate image source
   },
   hearts: 3,
   points: 150,

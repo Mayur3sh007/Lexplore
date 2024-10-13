@@ -12,8 +12,8 @@ import { redirect } from "next/navigation";
 // Simulated data
 const userProgress = {
   activeCourse: {
-    title: "Spanish", // Course title
-    imageSrc: "/path/to/spanish-image.svg" // Replace with the actual image path
+    title: "French", // Course title
+    imageSrc: "/france.png" // Replace with the actual image path
   },
   hearts: 3,
   points: 150,
