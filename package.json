@@ -34,6 +34,7 @@
     "sonner": "^1.4.41",
     "tailwind-merge": "^2.2.2",
     "tailwindcss-animate": "^1.0.7",
+    "undici": "^5.28.4",
     "zustand": "^4.5.2"
   },
   "devDependencies": {
@@ -49,5 +50,8 @@
     "tailwindcss": "^3.3.0",
     "tsx": "^4.7.1",
     "typescript": "^5"
+  },
+  "overrides": {
+    "undici": "5.28.4"
   }
 }
