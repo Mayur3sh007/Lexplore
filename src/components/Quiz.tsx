@@ -102,10 +102,11 @@ export default function Quizs() {
       const now = new Date();
       const formattedTime = now.toISOString();
       setCurrTime(formattedTime)
-      setQuizState(data.quiz_state)
+      setQuizState("answering")
 
       console.log("GOT NEW DATA")
       console.log("DATA: ", data)
+      console.log(useCases)
 
     } catch (error) {
       console.error('Error getting question:', error)
