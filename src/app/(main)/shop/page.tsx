@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 const userProgress = {
   activeCourse: { 
     title: "French",  // Change activeCourse to be an object
-    imageSrc: "france.png" // Add the appropriate image source
+    imageSrc: "/images/french.png" // Add the appropriate image source
   },
   hearts: 3,
   points: 150,

@@ -24,10 +24,10 @@ const userSubscription = {
 };
 
 const leaderboard = [
-  { userId: 1, userName: "Alice", userImageSrc: "/images/alice.jpg", points: 300 },
+  { userId: 1, userName: "Alice", userImageSrc: "/images/alice.jfif", points: 300 },
   { userId: 2, userName: "Bob", userImageSrc: "/images/bob.jpg", points: 250 },
-  { userId: 3, userName: "Charlie", userImageSrc: "/images/charlie.jpg", points: 200 },
-  { userId: 4, userName: "David", userImageSrc: "/images/david.jpg", points: 150 },
+  { userId: 3, userName: "Charlie", userImageSrc: "/images/charlie.jfif", points: 200 },
+  { userId: 4, userName: "David", userImageSrc: "/images/david.jfif", points: 150 },
   // Add more users as needed
 ];
 
