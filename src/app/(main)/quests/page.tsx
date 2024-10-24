@@ -11,7 +11,7 @@ import { Progress } from "@/components/ui/progress"; // Ensure this import is co
 const simulatedUserProgress = {
   activeCourse: { 
     title: "Spanish",  
-    imageSrc: "/path/to/spanish-image.svg" 
+    imageSrc: "/images/french.png" 
   },
   hearts: 3,
   points: 120,
