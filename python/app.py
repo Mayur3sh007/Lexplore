@@ -38,13 +38,6 @@ df = pd.read_csv('Questions.csv')
 
 # Generator Functions for Questions
 def get_unique_question(category, difficulty, question_history, last_question=None, max_retries=50):
-    # print("Getting unique question")
-    # print("Category", category)
-    # print("Difficulty", difficulty)
-    # print("Question History", question_history)
-    # print("Last Question", last_question)
-    # print("Full DataFrame", df.head())
-
     difficulty_map = {0: 'Easy', 1: 'Medium', 2: 'Hard'}
     difficulty_str = difficulty_map.get(difficulty, 'Easy') # Get difficulty string from difficulty number or by default to 'Easy' if difficulty is out of range
 
@@ -64,7 +57,7 @@ def get_unique_question(category, difficulty, question_history, last_question=No
             attempt += 1
             # Use LLaMA model to select the next best question
             prompt = f"""
-                Given the following context and available questions, select the most appropriate next question for a learning flow:
+                Given the following context and available questions, select next question of different variety:
 
                 Last question asked: "{last_question}"
                 Category: {category}
@@ -115,11 +108,102 @@ def get_unique_question(category, difficulty, question_history, last_question=No
     # print(f"Selected question: {main_question}")
     return (main_question, options, answer), int(selected_row.name)
 
+# def generate_ai_enhanced_question(category, difficulty, question_history, last_question=None):
+
+#     # First, get a question from the dataset
+#     template_question_data, template_question_id = get_unique_question(category, difficulty, question_history, last_question)
+#     # print("Question from dataset", template_question_data)
+
+#     if template_question_data is None:
+#         return None, None  # No more unique questions available
+
+#     template_main_question, template_options, template_answer = template_question_data
+
+#     # Now, use this as a template for the LLaMA model to generate a new question
+#     prompt = f"""
+#     Using the following question as a template, create a new, similar question in French with English translation:
+
+#     Template Question: {template_main_question}
+#     Template Options: {', '.join(template_options)}
+#     Template Answer: {template_answer}
+
+#     Create a new question that:
+#     1. Is in the same category ({category}) and difficulty level ({difficulty}).
+#     2. Has a similar structure but different content from the template.
+#     3. Includes four options, with one correct answer.
+#     4. Provides both French and English versions of the question and options.
+
+#     Output format:
+#     French Question: [Your generated question in French]
+#     English Translation: [English translation of the question]
+#     Options:
+#     A. [Option 1 in French] (English: [English translation])
+#     B. [Option 2 in French] (English: [English translation])
+#     C. [Option 3 in French] (English: [English translation])
+#     D. [Option 4 in French] (English: [English translation])
+#     Correct Answer: [The letter of the correct option]
+#     """
+
+#     response = client.chat.completions.create(
+#         model="llama3-8b-8192",  # Your chosen LLaMA model
+#         messages=[{"role": "user", "content": prompt}],
+#         max_tokens=300,
+#         temperature=0.7
+#     )
+
+#     # Parse the response
+#     content = response.choices[0].message.content.strip().split("\n")
+
+#     # Initialize variables
+#     french_question = ""
+#     english_question = ""
+#     french_options = []
+#     english_options = []
+#     correct_answer = ""
+
+#     # Parse the content more robustly
+#     for line in content:
+#         if line.startswith("French Question:"):
+#             french_question = line.split(":", 1)[1].strip()
+#         elif line.startswith("English Translation:"):
+#             english_question = line.split(":", 1)[1].strip()
+#         elif line.startswith(("A.", "B.", "C.", "D.")):
+#             parts = line.split("(English:", 1)
+#             if len(parts) == 2:
+#                 french_option = parts[0].split(".", 1)[1].strip()
+#                 english_option = parts[1].strip().rstrip(")")
+#                 french_options.append(french_option)
+#                 english_options.append(english_option)
+#         elif line.startswith("Correct Answer:"):
+#             correct_answer = line.split(":", 1)[1].strip()
+
+#     # Validate the parsed data
+#     if not (french_question and english_question and len(french_options) == 4 and len(english_options) == 4 and correct_answer):
+#         print("Warning: Unable to parse the AI response correctly. Using template question instead.")
+#         return {
+#             "french_question": template_main_question,
+#             "english_question": template_main_question,
+#             "french_options": template_options,
+#             "english_options": template_options,
+#             "correct_answer": template_answer
+#         }, template_question_id
+#     print("Ai Generated Question Function")
+#     print(f"Generated French Question: {french_question}")
+#     print(f"Generated Options: {french_options}")
+#     print(f"Generated Correct Answer: {correct_answer}")
+
+#     return {
+#         "french_question": french_question,
+#         "english_question": english_question,
+#         "french_options": french_options,
+#         "english_options": english_options,
+#         "correct_answer": correct_answer
+#     }, int(template_question_id)
+
 def generate_ai_enhanced_question(category, difficulty, question_history, last_question=None):
 
     # First, get a question from the dataset
     template_question_data, template_question_id = get_unique_question(category, difficulty, question_history, last_question)
-    # print("Question from dataset", template_question_data)
 
     if template_question_data is None:
         return None, None  # No more unique questions available
@@ -154,8 +238,8 @@ def generate_ai_enhanced_question(category, difficulty, question_history, last_q
     response = client.chat.completions.create(
         model="llama3-8b-8192",  # Your chosen LLaMA model
         messages=[{"role": "user", "content": prompt}],
-        max_tokens=300,
-        temperature=0.7
+        max_tokens=250,
+        temperature=0.5
     )
 
     # Parse the response
@@ -184,8 +268,11 @@ def generate_ai_enhanced_question(category, difficulty, question_history, last_q
         elif line.startswith("Correct Answer:"):
             correct_answer = line.split(":", 1)[1].strip()
 
-    # Validate the parsed data
-    if not (french_question and english_question and len(french_options) == 4 and len(english_options) == 4 and correct_answer):
+    # Map the correct answer letter (A, B, C, D) to the actual answer
+    letter_to_index = {'A': 0, 'B': 1, 'C': 2, 'D': 3}
+    correct_answer_index = letter_to_index.get(correct_answer, None)
+
+    if correct_answer_index is None or correct_answer_index >= len(french_options):
         print("Warning: Unable to parse the AI response correctly. Using template question instead.")
         return {
             "french_question": template_main_question,
@@ -195,13 +282,22 @@ def generate_ai_enhanced_question(category, difficulty, question_history, last_q
             "correct_answer": template_answer
         }, template_question_id
 
+    # Get the actual correct answer content
+    correct_answer_content = french_options[correct_answer_index]
+
+    print("AI Generated Question Function")
+    print(f"Generated French Question: {french_question}")
+    print(f"Generated Options: {french_options}")
+    print(f"Generated Correct Answer: {correct_answer_content}")
+
     return {
         "french_question": french_question,
         "english_question": english_question,
         "french_options": french_options,
         "english_options": english_options,
-        "correct_answer": correct_answer
+        "correct_answer": correct_answer_content
     }, int(template_question_id)
+
 
 def generate_use_cases(question, options):
     options_str = ', '.join(options)
@@ -265,6 +361,9 @@ def generate_use_cases(question, options):
     return use_cases_json  # Return the JSON object
 
 def check_answer(user_answer, correct_answer):
+    print("Check Answer Function")
+    print(f"User's answer: {user_answer}, Correct answer: {correct_answer}")
+
     return user_answer.lower().strip() == correct_answer.lower().strip()
 
 def print_performance_summary(user_performance, correct_answers, incorrect_answers):
@@ -284,7 +383,6 @@ def print_performance_summary(user_performance, correct_answers, incorrect_answe
             }
 
     return performance_summary
-
 
 @app.route('/quiz', methods=['POST'])
 def quiz():
@@ -322,7 +420,7 @@ def quiz():
         question_data, question_id = generate_ai_enhanced_question(
             state['category'], difficulty_index, state['question_history'], state['last_question']
         )
-        print("Question ID Type", type(question_id))
+        print("Question Data",question_data)
 
         if question_data is None:
             return jsonify({'message': 'No more questions available', 'quiz_ended': True, 'quiz_state': state})
@@ -365,14 +463,6 @@ def quiz():
             result = False
             message = "Time's up! You took too long to answer."
         else:
-            # correct_answer = current_q['correct_answer']  # e.g., "A"
-            # french_options = current_q['french_options']  # e.g., ['Un', 'Une', 'Les', 'Des']
-
-            # # Check if the correct_answer is valid
-            # correct_option = 0
-            # if correct_answer in french_options:
-            #     correct_option = french_options[french_options.index(correct_answer)]
-            # result = check_answer(user_answer, correct_option)
             result = check_answer(user_answer, current_q['correct_answer'])
             message = "Correct!" if result else f"Incorrect. The correct answer was: {current_q['correct_answer']}"
 

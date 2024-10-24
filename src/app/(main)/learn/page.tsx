@@ -8,6 +8,7 @@ import { Unit } from "./_components/units"; // Ensure this path is correct
 import { Promo } from "@/components/promo";
 import { Quests } from "@/components/quests";
 import { Metadata } from "next";
+import Quizs from "@/components/Quiz";
 
 // Simulated Data
 const userProgress = {
@@ -75,33 +76,8 @@ const LearnPage = () => {
   const activeLessonId = courseProgress.activeLesson; // Changed to activeLessonId
 
   return (
-    <div className="flex flex-row-reverse gap-[48px] px-6">
-      <StickyWrapper>
-        <UserProgress
-          activeCourse={userProgress.activeCourse} // Pass the complete object
-          hearts={userProgress.hearts}
-          points={userProgress.points}
-          hasActiveSubscription={isPro}
-        />
-        {!isPro && <Promo />}
-        <Quests points={userProgress.points} />
-      </StickyWrapper>
-      <FeedWrapper>
-        <Header title={userProgress.activeCourse.title} />
-        {units.map((unit) => (
-          <div key={unit.id} className="mb-10">
-            <Unit
-              id={unit.id}
-              order={unit.order}
-              description={unit.description}
-              title={unit.title}
-              lessons={unit.lessons} // Make sure lessons include completed property
-              activeLessonId={activeLessonId} // Use activeLessonId instead of activeLesson
-              activeLessonPercentage={lessonPercentage[activeLessonId]} // This should now work without errors
-            />
-          </div>
-        ))}
-      </FeedWrapper>
+    <div>
+      <Quizs />
     </div>
   );
 };
