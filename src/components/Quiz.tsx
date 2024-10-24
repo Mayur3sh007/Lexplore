@@ -9,7 +9,7 @@ import { CheckCircle, XCircle, Book, Award } from "lucide-react"
 import * as RadioGroup from '@radix-ui/react-radio-group'
 import ReactConfetti  from 'react-confetti'
 
-export default function EnhancedFrenchQuiz() {
+export default function EnhancedFrenchQuiz( { TypeofQuestion }: { TypeofQuestion: string }) {
   const [showUseCases, setShowUseCases] = useState(false)
   const [showQuestion, setShowQuestion] = useState(false)
   const [showAnswerReview, setShowAnswerReview] = useState(false)
@@ -23,7 +23,7 @@ export default function EnhancedFrenchQuiz() {
     usecases: Array<{ example: string; answer: string; explanation: string }>;
   } | null>(null)
   const [quizAction, setQuizAction] = useState('start')
-  const [category, setCategory] = useState('Greetings')
+  const [category, setCategory] = useState(TypeofQuestion)
   const [result, setResult] = useState<{ result: string; message: string; timeTaken: number } | null>(null)
   const [performanceSummary, setPerformanceSummary] = useState<{
     difficulties: Record<string, any>;
@@ -348,10 +348,10 @@ export default function EnhancedFrenchQuiz() {
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2">
                     <span className="font-semibold text-blue-700">Your answer:</span>
-                    <span className={result.result === 'correct' ? 'text-green-600' : 'text-red-600'}>
+                    <span className={result.result === true ? 'text-green-600' : 'text-red-600'}>
                       {selectedAnswer}
                       <AnimatePresence>
-                        {result.result === 'correct' ? (
+                        {result.result === true ? (
                           <motion.span
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
