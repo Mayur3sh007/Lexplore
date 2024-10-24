@@ -1,60 +1,49 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { Progress } from "@/components/ui/progress"
-import { CheckCircleIcon, XCircleIcon } from "lucide-react"
+import { CheckCircle, XCircle, Book, Award } from "lucide-react"
+import * as RadioGroup from '@radix-ui/react-radio-group'
+import ReactConfetti  from 'react-confetti'
 
-export default function Quizs() {
-
-  type UseCase = {
-    answer: string;
-    example: string;
-    explanation: string;
-  };
-
-  type UseCasesData = {
+export default function EnhancedFrenchQuiz() {
+  const [showUseCases, setShowUseCases] = useState(false)
+  const [showQuestion, setShowQuestion] = useState(false)
+  const [showAnswerReview, setShowAnswerReview] = useState(false)
+  const [selectedAnswer, setSelectedAnswer] = useState('')
+  const [question, setQuestion] = useState<string | null>(null)
+  const [options, setOptions] = useState<string[]>([])
+  const [difficulty, setDifficulty] = useState<string | null>(null)
+  const [timeLimit, setTimeLimit] = useState<number>(0)
+  const [useCases, setUseCases] = useState<{
     title: string;
-    conclusion: string;
-    usecases: UseCase[];
-  };
-
-  type ResultType = {
-    result: string;
-    message: string;
-    timeTaken: number;
-  };
-
-  type PerformanceType = {
+    usecases: Array<{ example: string; answer: string; explanation: string }>;
+  } | null>(null)
+  const [quizAction, setQuizAction] = useState('start')
+  const [category, setCategory] = useState('Greetings')
+  const [result, setResult] = useState<{ result: string; message: string; timeTaken: number } | null>(null)
+  const [performanceSummary, setPerformanceSummary] = useState<{
     difficulties: Record<string, any>;
     total_correct: number;
     total_incorrect: number;
-  };
-
-  const [question, setQuestion] = useState<string | null>(null);
-  const [options, setOptions] = useState<string[]>([]);
-  const [difficulty, setDifficulty] = useState<string | null>(null);
-  const [timeLimit, setTimeLimit] = useState<number>(0);
-  const [useCases, setUseCases] = useState<UseCasesData | null>(null);
-  const [quizAction, setQuizAction] = useState('start')
-  const [category, setCategory] = useState('Grammar')
-  const [selectedAnswer, setSelectedAnswer] = useState('')
-  const [result, setResult] = useState<ResultType | null>(null);
-  const [performanceSummary, setPerformanceSummary] = useState<PerformanceType | null>(null);
+  } | null>(null)
   const [loading, setLoading] = useState(false)
-  const [questionCount, setQuestionCount] = useState(0);  // Question counter
-  const [currTime, setCurrTime] = useState<any>(0);
+  const [questionCount, setQuestionCount] = useState(0)
+  const [currTime, setCurrTime] = useState<any>(0)
   const [quizState, setQuizState] = useState<any>([])
-  useEffect(() => {
-    // Remove the automatic call to startQuiz here
-  }, [category])
+  const [correctAnswer, setCorrectAnswer] = useState('')
+  const [scores, setScores] = useState({
+    correct: 0,
+    incorrect: 0
+  })
+  const [progress, setProgress] = useState(1)
 
   const startQuiz = async (Category: string) => {
     setLoading(true)
-    setQuestionCount(0)  // Reset question count at the start
+    setQuestionCount(0)
     try {
       const response = await fetch('http://127.0.0.1:5000/quiz', {
         method: 'POST',
@@ -63,7 +52,7 @@ export default function Quizs() {
       })
       const data = await response.json()
 
-      setQuizAction("answering") // Save the initial quiz state from server
+      setQuizAction("answering")
       console.log("Started Quiz")
       console.log("Quiz State: ", data.quiz_state)
       if (data.next_action === 'get_question') {
@@ -77,9 +66,9 @@ export default function Quizs() {
   }
 
   const getQuestion = async (currentState: any) => {
-    if (questionCount >= 5) {
-      endQuiz(currentState);  // End quiz after 10 questions
-      return;
+    if (questionCount >= 3) {
+      endQuiz(currentState)
+      return
     }
 
     setLoading(true)
@@ -97,12 +86,10 @@ export default function Quizs() {
       setDifficulty(data.difficulty)
       setTimeLimit(data.time_limit)
       setUseCases(data.use_cases)
-      setQuizAction("answering")  // Update state with new data
-      setQuestionCount(prevCount => prevCount + 1);  // Increment the question count
-      const now = new Date();
-      const formattedTime = now.toISOString();
-      setCurrTime(formattedTime)
+      setQuizAction("answering")
+      setQuestionCount(prevCount => prevCount + 1)
       setQuizState(data.quiz_state)
+      setCorrectAnswer(data.quiz_state.correct_answer || '')
 
       console.log("GOT NEW DATA")
       console.log("DATA: ", data)
@@ -113,167 +100,355 @@ export default function Quizs() {
     setLoading(false)
   }
 
-
-  const submitAnswer = async () => {
-    setLoading(true);
+  const handleSubmitAnswer = async () => {
+    setLoading(true)
     try {
-      console.log(selectedAnswer)
       const response = await fetch('http://127.0.0.1:5000/quiz', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'submit_answer',start_time: currTime, question: question, options: options ,timelimit : timeLimit ,answer: selectedAnswer, quiz_state: quizState, difficulty: difficulty }),
-      });
+        body: JSON.stringify({
+          action: 'submit_answer',
+          start_time: currTime,
+          question: question,
+          options: options,
+          timelimit: timeLimit,
+          answer: selectedAnswer,
+          quiz_state: quizState,
+          difficulty: difficulty
+        }),
+      })
 
-      const data = await response.json();
-      setResult({ result: data.result, message: data.message, timeTaken: data.time_taken });
-      setQuizAction(data.quiz_state);  // Update state with new data
+      const data = await response.json()
+      setResult({
+        result: data.result,
+        message: data.message,
+        timeTaken: data.time_taken
+      })
 
-      if (data.next_action === 'get_question' && questionCount < 10) {
-        getQuestion(data.quiz_state);
-      } else if (data.next_action === 'end_quiz' || questionCount >= 10) {
-        endQuiz(data.quiz_state);
+      setScores(prevScores => ({
+        correct: prevScores.correct + (data.result === true ? 1 : 0),
+        incorrect: prevScores.incorrect + (data.result === false ? 1 : 0)
+      }))
+
+      setCorrectAnswer(data.quiz_state.correct_answer || '')
+      setQuizAction(data.quiz_state)
+      setShowQuestion(false)
+      setShowAnswerReview(true)
+
+      setQuizState(data.quiz_state)
+
+      // Animate progress bar
+      setProgress((prevProgress) => Math.min(prevProgress + 33.33, 100))
+
+      // Trigger confetti for correct answers
+      if (data.result === true) {
+        <ReactConfetti
+          width={window.innerWidth}
+          height={window.innerHeight}
+          numberOfPieces={200}
+        />
       }
 
     } catch (error) {
-      console.error('Error submitting answer:', error);
+      console.error('Error submitting answer:', error)
     }
-    setLoading(false);
-  };
+    setLoading(false)
+  }
 
   const endQuiz = async (currentState: any) => {
-    setLoading(true);
+    setLoading(true)
     try {
       const response = await fetch('http://127.0.0.1:5000/quiz', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'end_quiz', quiz_state: currentState }),
-      });
-      const data = await response.json();
-      setPerformanceSummary(data.performance_summary);
-      setQuizAction(data.quiz_state);  // Update state with end data
+        body: JSON.stringify({
+          action: 'end_quiz',
+          quiz_state: currentState,
+          scores: {
+            total_correct: scores.correct,
+            total_incorrect: scores.incorrect
+          }
+        }),
+      })
+      const data = await response.json()
+
+      setPerformanceSummary({
+        difficulties: data.performance_summary?.difficulties || {},
+        total_correct: scores.correct,
+        total_incorrect: scores.incorrect
+      })
+
+      setQuizAction(data.quiz_state)
+      setShowAnswerReview(false)
+      setShowQuestion(false)
+      setShowUseCases(false)
 
     } catch (error) {
-      console.error('Error ending quiz:', error);
+      console.error('Error ending quiz:', error)
     }
-    setLoading(false);
-  };
+    setLoading(false)
+  }
 
+  const startLesson = () => {
+    setScores({ correct: 0, incorrect: 0 })
+    startQuiz(category)
+    setShowUseCases(true)
+    setQuestionCount(0)
+  }
 
+  const proceedToQuestion = () => {
+    const now = new Date()
+    const formattedTime = now.toISOString()
+    setCurrTime(formattedTime)
+    setShowUseCases(false)
+    setShowQuestion(true)
+    setShowAnswerReview(false)
+  }
 
-  const renderUseCases = () => (
-    <Card className="mb-6">
-      <CardHeader>
-        <CardTitle>Use Cases:</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {useCases && useCases.usecases.map((useCase, index) => (
-          <div key={index} className="mb-4">
-            <p className="font-semibold">Example: {useCase.example}</p>
-            <p>Answer: {useCase.answer}</p>
-            <p>Explanation: {useCase.explanation}</p>
-          </div>
-        ))}
-      </CardContent>
-    </Card>
-  )
-
-  const renderQuestion = () => (
-    <Card className="mb-6">
-      <CardHeader>
-        <CardTitle>{question}</CardTitle>
-        <CardDescription>
-          Difficulty: {difficulty} | Time Limit: {timeLimit} seconds
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {options.map((option, index) => (
-          <div key={index} className="flex items-center space-x-2">
-            <input
-              type="radio"
-              value={option}
-              id={`option-${index}`}
-              name="quiz-options"
-              className="mr-2"
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSelectedAnswer(e.target.value)}
-            />
-            <Label htmlFor={`option-${index}`}>{option}</Label>
-          </div>
-        ))}
-        <Button className="mt-4" onClick={submitAnswer} disabled={!selectedAnswer}>
-          Submit Answer
-        </Button>
-      </CardContent>
-    </Card>
-  );
-
-  const renderResult = () => (
-    <Card className="mb-6">
-      <CardHeader>
-        <CardTitle>
-          {result && result.result ? (
-            <CheckCircleIcon className="inline-block mr-2 text-green-500" />
-          ) : (
-            <XCircleIcon className="inline-block mr-2 text-red-500" />
-          )}
-          {result && result.result ? 'Correct!' : 'Incorrect'}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p>{result?.message || 'No message available.'}</p>
-        <p className="text-sm text-gray-500">
-          Time taken: {result?.timeTaken ? result.timeTaken.toFixed(2) : 'N/A'} seconds
-        </p>
-      </CardContent>
-    </Card>
-  );
-
-
-  const renderPerformanceSummary = () => (
-    <Card className="mb-6">
-      <CardHeader>
-        <CardTitle>Quiz Complete!</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {
-          performanceSummary !== null ? (
-            <>
-              <p>Total Correct: {performanceSummary && performanceSummary.total_correct}</p>
-              <p>Total Incorrect: {performanceSummary && performanceSummary.total_incorrect}</p>
-
-              {Object.entries(performanceSummary.difficulties).map(([difficulty, stats]: [string, any]) => (
-                <div key={difficulty} className="mt-4">
-                  <h4 className="font-semibold">{difficulty}:</h4>
-                  <p>Accuracy: {stats.accuracy}</p>
-                  <p>Correct: {stats.correct}</p>
-                  <p>Total: {stats.total}</p>
-                  <Progress value={(stats.correct / stats.total) * 100} className="mt-2" />
-                </div>
-              ))}
-              <Button className="mt-6" onClick={() => setQuizAction('start')}>
-                Start New Quiz
-              </Button>
-            </>
-          ) : (
-            <p>No performance summary available</p>
-          )
-        }
-      </CardContent>
-    </Card>
-  )
+  const proceedToNext = () => {
+    if (questionCount >= 3) {
+      endQuiz(quizState)
+    } else {
+      setShowAnswerReview(false)
+      setShowUseCases(true)
+      setSelectedAnswer('')
+      getQuestion(quizState)
+    }
+  }
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6">French Learning Quiz</h1>
-      {loading && <Progress className="mb-4" />}
-      {quizAction === 'start' && (
-        <Button onClick={() => startQuiz('Grammar')}>
-          Start Quiz
-        </Button>
-      )}
-      {quizAction === 'answering' && renderUseCases() &&  renderQuestion()}
-      {quizAction === 'result' && renderResult()}
-      {quizAction === 'end' && renderPerformanceSummary()}
-    </div>
-  );
+    <div className="max-w-4xl mx-auto p-6 space-y-6 bg-gradient-to-br from-blue-50 to-blue-100 min-h-screen">
+      {/* Lesson Progress Bar */}
+      <div className="w-full bg-blue-200 rounded-full h-2.5 mb-4">
+        <motion.div 
+          className="bg-blue-600 h-2.5 rounded-full"
+          initial={{ width: 0 }}
+          animate={{ width: `${progress}%` }}
+          transition={{ duration: 0.5 }}
+        />
+      </div>
+      <Card className="bg-white shadow-lg border-blue-200">
+        <CardHeader className="bg-blue-600 text-white rounded-t-lg">
+          <CardTitle className="text-2xl font-bold">French Learning Adventure</CardTitle>
+        </CardHeader>
+        <CardContent className="p-6">
+          {!showUseCases && !showQuestion && !showAnswerReview && !performanceSummary && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="text-center space-y-4"
+            >
+              <Book className="w-16 h-16 mx-auto text-blue-600" />
+              <h2 className="text-2xl font-bold text-blue-800">Welcome to Your French Lesson</h2>
+              <p className="text-blue-600">Embark on a journey to master the French language!</p>
+              <Button
+                onClick={startLesson}
+                className="bg-blue-600 hover:bg-blue-700 transition-colors duration-200"
+              >
+                Start Your Adventure
+              </Button>
+            </motion.div>
+          )}
 
+          {showUseCases && useCases && !showAnswerReview && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="space-y-6"
+            >
+              <h3 className="text-xl font-semibold text-blue-800">{useCases.title}</h3>
+              {useCases.usecases.map((useCase, index) => (
+                <Card key={index} className="bg-blue-50 border-blue-200">
+                  <CardContent className="p-4 space-y-3">
+                    <div>
+                      <h4 className="font-semibold text-blue-700">Example:</h4>
+                      <p className="text-blue-600">{useCase.example}</p>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-blue-700">Answer:</h4>
+                      <p className="text-blue-600">{useCase.answer}</p>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-blue-700">Explanation:</h4>
+                      <p className="text-blue-600">{useCase.explanation}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              <div className="text-center mt-6">
+                <Button
+                  onClick={proceedToQuestion}
+                  className="bg-green-600 hover:bg-green-700 transition-colors duration-200"
+                >
+                  Test Your Knowledge
+                </Button>
+              </div>
+            </motion.div>
+          )}
+
+          {showQuestion && question && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="space-y-6"
+            >
+              <h3 className="text-xl font-semibold text-blue-800">Practice Question</h3>
+              <p className="text-blue-600">Difficulty: {difficulty} | Time Limit: {timeLimit} seconds</p>
+              <div className="text-lg font-medium text-blue-900">{question}</div>
+              <RadioGroup.Root
+                value={selectedAnswer}
+                onValueChange={setSelectedAnswer}
+                className="space-y-4"
+              >
+                {options.map((option, index) => (
+                  <motion.div
+                    key={index}
+                    className="flex items-center space-x-2 p-3 rounded-lg border border-blue-200 hover:bg-blue-50 transition-colors duration-200"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <RadioGroup.Item
+                      value={option}
+                      id={`option-${index}`}
+                      className="w-4 h-4 rounded-full border-2 border-blue-400 text-blue-600 focus:ring-blue-400"
+                    >
+                      <RadioGroup.Indicator className="flex items-center justify-center w-full h-full relative after:content-[''] after:block after:w-2 after:h-2 after:rounded-full after:bg-blue-600" />
+                    </RadioGroup.Item>
+                    <Label htmlFor={`option-${index}`} className="text-blue-800 cursor-pointer flex-grow">
+                      {option}
+                    </Label>
+                  </motion.div>
+                ))}
+              </RadioGroup.Root>
+              <div className="text-center mt-6">
+                <Button
+                  onClick={handleSubmitAnswer}
+                  disabled={!selectedAnswer}
+                  className="bg-blue-600 hover:bg-blue-700 transition-colors duration-200"
+                >
+                  Submit Answer
+                </Button>
+              </div>
+            </motion.div>
+          )}
+
+          {showAnswerReview && result && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="space-y-6"
+            >
+              <h3 className="text-xl font-semibold text-blue-800">Question Review</h3>
+              <div className="space-y-4">
+                <div className="text-lg font-medium text-blue-900">{question}</div>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <span className="font-semibold text-blue-700">Your answer:</span>
+                    <span className={result.result === 'correct' ? 'text-green-600' : 'text-red-600'}>
+                      {selectedAnswer}
+                      <AnimatePresence>
+                        {result.result === 'correct' ? (
+                          <motion.span
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            exit={{ scale: 0 }}
+                          >
+                            <CheckCircle className="inline ml-2 h-5 w-5"   />
+                          </motion.span>
+                        ) : (
+                          <motion.span
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            exit={{ scale: 0 }}
+                          >
+                            <XCircle className="inline ml-2 h-5 w-5" />
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+                    </span>
+                  </div>
+                  {result.result !== 'correct' && (
+                    <div className="flex items-center space-x-2">
+                      <span className="font-semibold text-blue-700">Correct answer:</span>
+                      <span className="text-green-600">{correctAnswer}</span>
+                    </div>
+                  )}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="mt-4 p-4 rounded-lg bg-blue-50 border border-blue-200"
+                  >
+                    <p className="font-medium text-blue-800">{result.message}</p>
+                    <p className="text-sm text-blue-600">Time taken: {result.timeTaken} seconds</p>
+                  </motion.div>
+                </div>
+                <div className="text-center mt-6">
+                  <Button
+                    onClick={proceedToNext}
+                    className="bg-blue-600 hover:bg-blue-700 transition-colors duration-200"
+                  >
+                    {questionCount >= 3 ? 'See Final Results' : 'Next Question'}
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {performanceSummary && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="space-y-6"
+            >
+              <div className="text-center">
+                <Award className="w-16 h-16 mx-auto text-blue-600" />
+                <h2 className="text-2xl font-bold text-blue-800 mt-4">Lesson Complete!</h2>
+                <p className="text-blue-600">Here's how you performed:</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-green-100 rounded-lg text-center">
+                  <h3 className="font-semibold text-green-800">Correct Answers</h3>
+                  <p className="text-3xl font-bold text-green-600">{scores.correct}</p>
+                </div>
+                <div className="p-4 bg-red-100 rounded-lg text-center">
+                  <h3 className="font-semibold text-red-800">Incorrect Answers</h3>
+                  <p className="text-3xl font-bold text-red-600">{scores.incorrect}</p>
+                </div>
+              </div>
+              <div className="mt-4 text-center">
+                <p className="font-medium text-blue-800">Total Questions: {scores.correct + scores.incorrect}</p>
+                <p className="font-medium text-blue-800">Success Rate: {
+                  Math.round((scores.correct / (scores.correct + scores.incorrect)) * 100)
+                }%</p>
+              </div>
+              <div className="text-center mt-6">
+                <Button
+                  onClick={() => window.location.reload()}
+                  className="bg-blue-600 hover:bg-blue-700 transition-colors duration-200"
+                >
+                  Start New Lesson
+                </Button>
+              </div>
+            </motion.div>
+          )}
+        </CardContent>
+      </Card>
+
+      {loading && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            className="w-16 h-16 border-t-4 border-blue-500 border-solid rounded-full"
+          />
+        </div>
+      )}
+    </div>
+  )
 }
