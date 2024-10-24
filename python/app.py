@@ -34,10 +34,9 @@ api_key = os.environ.get("GROQ_API_KEY")
 
 # Load your questions dataset
 df = pd.read_csv('Questions.csv')
-# print(df['Category'].value_counts())
 
 # Generator Functions for Questions
-def get_unique_question(category, difficulty, question_history, last_question=None, max_retries=50):
+def get_unique_question(category, difficulty, question_history, last_question=None, max_retries=5):
     difficulty_map = {0: 'Easy', 1: 'Medium', 2: 'Hard'}
     difficulty_str = difficulty_map.get(difficulty, 'Easy') # Get difficulty string from difficulty number or by default to 'Easy' if difficulty is out of range
 

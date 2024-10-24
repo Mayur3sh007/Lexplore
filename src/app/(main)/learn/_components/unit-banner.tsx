@@ -1,6 +1,5 @@
 "use client";
 
-
 import { Button } from "@/components/ui/button";
 import { NotebookText } from "lucide-react";
 import Link from "next/link";
@@ -17,7 +16,7 @@ export const UnitBanner = ({ title, description }: Props) => {
         <h3 className="text-2xl font-bold">{title}</h3>
         <p className="text-lg">{description}</p>
       </div>
-      <Link href="/lesson">
+      <Link href={`/lesson?title=${encodeURIComponent(title)}`}>
         <Button
           size="lg"
           variant="secondary"
