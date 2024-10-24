@@ -410,7 +410,7 @@ export default function EnhancedFrenchQuiz( { TypeofQuestion }: { TypeofQuestion
               <div className="text-center">
                 <Award className="w-16 h-16 mx-auto text-blue-600" />
                 <h2 className="text-2xl font-bold text-blue-800 mt-4">Lesson Complete!</h2>
-                <p className="text-blue-600">Here's how you performed:</p>
+                <p className="text-blue-600"> Here is how you performed:</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 bg-green-100 rounded-lg text-center">
