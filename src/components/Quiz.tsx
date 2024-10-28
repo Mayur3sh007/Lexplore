@@ -5,9 +5,54 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { CheckCircle, XCircle, Book, Award } from "lucide-react"
+import { CheckCircle, XCircle, Book, Award, MessageCircle, Volume2 } from "lucide-react"
 import * as RadioGroup from '@radix-ui/react-radio-group'
 import ReactConfetti  from 'react-confetti'
+import axios from 'axios'
+import { Input } from './ui/input'
+
+// TTS Button Component
+const TTSButton = ({ text, className = "" }) => {
+  const [isPlaying, setIsPlaying] = useState(false)
+
+  const playTTS = async () => {
+    try {
+      setIsPlaying(true)
+      const response = await fetch('http://127.0.0.1:5000/text-to-speech', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      })
+
+      const audioBlob = await response.blob()
+      const audioUrl = URL.createObjectURL(audioBlob)
+      const audio = new Audio(audioUrl)
+      
+      audio.onended = () => {
+        setIsPlaying(false)
+        URL.revokeObjectURL(audioUrl)
+      }
+      
+      await audio.play()
+    } catch (error) {
+      console.error('Error playing TTS:', error)
+      setIsPlaying(false)
+    }
+  }
+
+  return (
+    <Button 
+      onClick={playTTS} 
+      disabled={isPlaying}
+      variant="ghost" 
+      size="sm"
+      className={`p-2 hover:bg-blue-100 ${className}`}
+    >
+      <Volume2 className={`w-4 h-4 ${isPlaying ? 'text-blue-600 animate-pulse' : 'text-blue-400'}`} />
+    </Button>
+  )
+}
+
 
 export default function EnhancedFrenchQuiz( { TypeofQuestion }: { TypeofQuestion: string }) {
   const [showUseCases, setShowUseCases] = useState(false)
@@ -40,25 +85,33 @@ export default function EnhancedFrenchQuiz( { TypeofQuestion }: { TypeofQuestion
     incorrect: 0
   })
   const [progress, setProgress] = useState(1)
+  const [chatHistory, setChatHistory] = useState<Array<{ role: string; content: string }>>([])
+  const [message, setMessage] = useState('')
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [showChat, setShowChat] = useState(false)
+  const [contextData, setContextData] = useState<string[]>([])
 
   const startQuiz = async (Category: string) => {
     setLoading(true)
-    setQuestionCount(0)
     try {
-      const response = await fetch('http://127.0.0.1:5000/quiz', {
+      // Start the quiz
+      const quizResponse = await fetch('http://127.0.0.1:5000/quiz', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'start', category: Category }),
       })
-      const data = await response.json()
+      const quizData = await quizResponse.json()
+
+      // Start the chat session with initial context
+      const chatResponse = await axios.post('http://localhost:5000/start_session', {
+        context: `French Learning Session - Category: ${Category}`
+      })
+      setSessionId(chatResponse.data.session_id)
 
       setQuizAction("answering")
-      console.log("Started Quiz")
-      console.log("Quiz State: ", data.quiz_state)
-      if (data.next_action === 'get_question') {
-        getQuestion(data.quiz_state)
+      if (quizData.next_action === 'get_question') {
+        getQuestion(quizData.quiz_state)
       }
-
     } catch (error) {
       console.error('Error starting quiz:', error)
     }
@@ -81,6 +134,15 @@ export default function EnhancedFrenchQuiz( { TypeofQuestion }: { TypeofQuestion
 
       const data = await response.json()
 
+      // Update context with new use cases
+      if (data.use_cases) {
+        const newContext = data.use_cases.usecases.map((useCase: any) => 
+          `Example: ${useCase.example}\nAnswer: ${useCase.answer}\nExplanation: ${useCase.explanation}`
+        ).join('\n\n')
+        
+        setContextData(prev => [...prev, newContext])
+      }
+
       setQuestion(data.question)
       setOptions(data.options)
       setDifficulty(data.difficulty)
@@ -100,6 +162,28 @@ export default function EnhancedFrenchQuiz( { TypeofQuestion }: { TypeofQuestion
     }
     setLoading(false)
   }
+
+    // Add chat functionality
+    const sendMessage = async () => {
+      if (!sessionId || !message.trim()) return
+  
+      try {
+        const updatedChatHistory = [...chatHistory, { role: 'user', content: message }]
+        const response = await axios.post('http://localhost:5000/chat', {
+          message,
+          chatHistory: updatedChatHistory,
+          courseContext: contextData.join('\n\n')
+        })
+        
+        setChatHistory([
+          ...updatedChatHistory,
+          { role: 'assistant', content: response.data.response }
+        ])
+        setMessage('')
+      } catch (error) {
+        console.error('Error sending message:', error)
+      }
+    }
 
   const handleSubmitAnswer = async () => {
     setLoading(true)
@@ -159,7 +243,8 @@ export default function EnhancedFrenchQuiz( { TypeofQuestion }: { TypeofQuestion
   const endQuiz = async (currentState: any) => {
     setLoading(true)
     try {
-      const response = await fetch('http://127.0.0.1:5000/quiz', {
+      // End quiz
+      const quizResponse = await fetch('http://127.0.0.1:5000/quiz', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -171,18 +256,25 @@ export default function EnhancedFrenchQuiz( { TypeofQuestion }: { TypeofQuestion
           }
         }),
       })
-      const data = await response.json()
+      const quizData = await quizResponse.json()
+
+      // End chat session
+      await axios.post('http://localhost:5000/end_session')
+      setSessionId(null)
+      setChatHistory([])
+      setContextData([])
 
       setPerformanceSummary({
-        difficulties: data.performance_summary?.difficulties || {},
+        difficulties: quizData.performance_summary?.difficulties || {},
         total_correct: scores.correct,
         total_incorrect: scores.incorrect
       })
 
-      setQuizAction(data.quiz_state)
+      setQuizAction(quizData.quiz_state)
       setShowAnswerReview(false)
       setShowQuestion(false)
       setShowUseCases(false)
+      setShowChat(false)
 
     } catch (error) {
       console.error('Error ending quiz:', error)
@@ -216,6 +308,62 @@ export default function EnhancedFrenchQuiz( { TypeofQuestion }: { TypeofQuestion
       getQuestion(quizState)
     }
   }
+
+
+  // Chat UI
+  const ChatComponent = () => (
+    <Card className="mt-6 bg-white shadow-lg border-blue-200">
+      <CardHeader className="bg-blue-600 text-white rounded-t-lg">
+        <CardTitle className="text-xl font-bold">Learning Assistant</CardTitle>
+      </CardHeader>
+      <CardContent className="p-6 max-h-96 overflow-y-auto">
+        <div className="space-y-4 mb-4">
+          {chatHistory.map((chat, index) => (
+            <div
+              key={index}
+              className={`p-3 rounded-lg ${
+                chat.role === 'user' 
+                  ? 'bg-blue-100 ml-auto' 
+                  : 'bg-gray-100'
+              } max-w-[80%] ${
+                chat.role === 'user' 
+                  ? 'ml-auto' 
+                  : 'mr-auto'
+              }`}
+            >
+              <p className="text-sm">{chat.content}</p>
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <Input
+            value={message}
+            onChange={(e:any) => setMessage(e.target.value)}
+            placeholder="Ask a question about the lesson..."
+            onKeyDown={(e : any) => e.key === 'Enter' && sendMessage()}
+          />
+          <Button
+            onClick={sendMessage}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            Send
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  )
+
+  // Add Chat Toggle Button in the main return
+  const ToggleChatButton = () => (
+    sessionId && (
+      <Button
+        onClick={() => setShowChat(!showChat)}
+        className="fixed bottom-6 right-6 rounded-full w-12 h-12 p-0"
+      >
+        <MessageCircle className="w-6 h-6" />
+      </Button>
+    )
+  )
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6 bg-gradient-to-br from-blue-50 to-blue-100 min-h-screen">
@@ -276,6 +424,7 @@ export default function EnhancedFrenchQuiz( { TypeofQuestion }: { TypeofQuestion
                       <p className="text-blue-600">{useCase.explanation}</p>
                     </div>
                   </CardContent>
+                  <TTSButton text={useCase.example + ' - ' + useCase.answer + ' - ' + useCase.explanation} />
                 </Card>
               ))}
               <div className="text-center mt-6">
@@ -440,6 +589,13 @@ export default function EnhancedFrenchQuiz( { TypeofQuestion }: { TypeofQuestion
           )}
         </CardContent>
       </Card>
+
+      {/* Add Chat Toggle Button */}
+      <ToggleChatButton />
+      
+      {/* Add Chat Component */}
+      {showChat && <ChatComponent />}
+
 
       {loading && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center">

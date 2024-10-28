@@ -4,11 +4,12 @@ import json
 import re
 from dotenv import load_dotenv
 from groq import Groq
-
+import uuid
 import pandas as pd
 from datetime import datetime
+from elevenlabs import ElevenLabs, VoiceSettings
 
-from flask import Flask, request, jsonify,session,g
+from flask import Flask, request, jsonify,session,Response
 from flask_cors import CORS
 from flask_session import Session
 
@@ -19,8 +20,8 @@ from dateutil import parser
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
 
-# Session
-app.secret_key = os.urandom(24)
+# Configure server-side sessions (only for start/end of chat)
+app.config['SECRET_KEY'] = os.urandom(24)
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['SESSION_FILE_DIR'] = './flask_session/'
 app.config['SESSION_PERMANENT'] = False
@@ -30,10 +31,73 @@ Session(app)
 load_dotenv()
 os.environ['GROQ_API_KEY'] = os.getenv("GROQ_API_KEY")
 client = Groq()
-api_key = os.environ.get("GROQ_API_KEY")
-
+api_key = os.environ.get("GROQ_API_KEY"
+)
+elevenLabs_API_KEY = os.getenv("elevenLabs_API_KEY")
+elevenlabs_client = ElevenLabs(
+    api_key=elevenLabs_API_KEY,
+)
 # Load your questions dataset
 df = pd.read_csv('Questions.csv')
+
+
+def chat_with_llama(user_prompt, chat_history, course_context):
+    # Prepare messages for the LLM interaction
+    messages = [
+        {"role": "system", "content": f"You are a helpful assistant. Give answer in maximum 25 lines. The financial course context is as follows: {course_context}"},
+        *chat_history
+    ]
+
+    # Send user's message to the LLM and get a response
+    response = client.chat.completions.create(
+        model="llama-3.1-8b-instant",
+        messages=messages,
+        temperature=0.5,
+        max_tokens=2048,
+        top_p=1,
+        stream=False,
+        stop=None
+    )
+
+    # Extract the assistant's response
+    assistant_response = response.choices[0].message.content
+
+    return assistant_response
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    data = request.json
+    user_message = data.get('message')
+    chat_history = data.get('chatHistory', [])
+    course_context = data.get('courseContext', '')
+    
+    if not user_message or not course_context:
+        return jsonify({"error": "Message or course context missing"}), 400
+
+    response = chat_with_llama(user_message, chat_history, course_context)
+    
+    return jsonify({"response": response})
+
+@app.route('/start_session', methods=['POST'])
+def start_session():
+    data = request.json
+    course_context = data.get('context')
+    
+    if not course_context:
+        return jsonify({"error": "No context provided"}), 400
+
+    # Generate a unique session ID
+    session_id = str(uuid.uuid4())
+    session['session_id'] = session_id
+    session['course_context'] = course_context
+
+    return jsonify({"session_id": session_id, "message": "New session started with provided context"})
+
+@app.route('/end_session', methods=['POST'])
+def end_session():
+    session.clear()
+    return jsonify({"message": "Session ended"})
+
 
 # Generator Functions for Questions
 def get_unique_question(category, difficulty, question_history, last_question=None, max_retries=5):
@@ -56,7 +120,7 @@ def get_unique_question(category, difficulty, question_history, last_question=No
             attempt += 1
             # Use LLaMA model to select the next best question
             prompt = f"""
-                Given the following context and available questions, select next question of different variety:
+                Given the following context and available questions, select next question:
 
                 Last question asked: "{last_question}"
                 Category: {category}
@@ -518,6 +582,38 @@ def quiz():
 
     else:
         return jsonify({'error': 'Invalid action'}, 400)
+
+@app.route('/text-to-speech', methods=['POST'])
+def text_to_speech():
+    try:
+        data = request.get_json()
+        text = data.get('text')
+    # Generate the audio
+        response = elevenlabs_client.text_to_speech.convert(
+            voice_id="pMsXgVXv3BLzUgSXRplE",
+            optimize_streaming_latency="0",
+            output_format="mp3_22050_32",
+            text=text,
+            voice_settings=VoiceSettings(
+                stability=0.1,
+                similarity_boost=0.3,
+                style=0.2,
+            ),
+            model_id="eleven_multilingual_v2",
+        )
+
+        return Response(
+            response=response,
+            content_type='audio/mpeg',
+            headers={
+                'Content-Disposition': 'inline; filename="output.mp3"'
+            }
+        )
+
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)
